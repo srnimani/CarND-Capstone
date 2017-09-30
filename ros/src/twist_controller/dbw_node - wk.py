@@ -62,7 +62,10 @@ class DBWNode(object):
 				max_steer_angle=max_steer_angle,
 				throttle_kp = throttle_kp,
 				throttle_ki = throttle_ki,
-				throttle_kd = throttle_kd)
+				throttle_kd = throttle_kd,
+				steering_kp = steering_kp,
+				steering_ki = steering_ki,
+				steering_kd = steering_kd)
 
         # Subscriptions
         rospy.Subscriber('/dbw_enabled', Bool, self.dbw_cb)
@@ -79,8 +82,8 @@ class DBWNode(object):
     def loop(self):
         rate = rospy.Rate(10) # 50Hz
         while not rospy.is_shutdown():
-            # Get predicted throttle, brake, and steering using `twist_controller`
-            # And publish only if the control commands dbw is enabled
+            # TODO: Get predicted throttle, brake, and steering using `twist_controller`
+            # You should only publish the control commands if dbw is enabled
 
             if self.twist_cmd is None or self.current_velocity is None:
                 continue
@@ -95,19 +98,21 @@ class DBWNode(object):
             rate.sleep()
 
     def publish(self, throttle, brake, steer):
-        rospy.loginfo("publishing Throttle %f, Brake %f, Steer %f", throttle, brake, steer)
-        
-        tcmd = ThrottleCmd()
-        tcmd.enable = True
-        tcmd.pedal_cmd_type = ThrottleCmd.CMD_PERCENT
-        tcmd.pedal_cmd = throttle
-        self.throttle_pub.publish(tcmd)
-        
-        bcmd = BrakeCmd()
-        bcmd.enable = True
-        bcmd.pedal_cmd_type = BrakeCmd.CMD_TORQUE
-        bcmd.pedal_cmd = brake
-        self.brake_pub.publish(bcmd)
+        rospy.loginfo("publishing throttle %f, brake %f, steer %f", throttle, brake, steer)
+        # We'll either publish the throttle or brake, not both
+
+        if throttle != 0:
+            tcmd = ThrottleCmd()
+            tcmd.enable = True
+            tcmd.pedal_cmd_type = ThrottleCmd.CMD_PERCENT
+            tcmd.pedal_cmd = throttle
+            self.throttle_pub.publish(tcmd)
+        else:
+            bcmd = BrakeCmd()
+            bcmd.enable = True
+            bcmd.pedal_cmd_type = BrakeCmd.CMD_TORQUE
+            bcmd.pedal_cmd = brake
+            self.brake_pub.publish(bcmd)
 
         scmd = SteeringCmd()
         scmd.enable = True
